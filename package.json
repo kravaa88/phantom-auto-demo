@@ -1,0 +1,6 @@
+{
+  "name": "phantom-auto-demo",
+  "private": true,
+  "type": "module",
+  "scripts": { "build": "node seo.mjs", "preview": "node preview.mjs" }
+}
