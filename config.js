@@ -13,6 +13,7 @@ export const shop = {
     ['brakes', 'Brake Service', 'Brakes', 'Inspect pads, rotors and fluid to identify the cause of noise, vibration or a soft pedal.'],
     ['tires', 'Tires & Suspension', 'Wheels', 'Check tires, steering and suspension for uneven wear, vibration and handling issues.'],
     ['diagnostics', 'Computer Diagnostics', 'Diagnostics', 'Read fault codes and test the affected systems to trace warning lights to their source.'],
+    ['bodywork', 'Bodywork & Paint', 'Bodywork', 'Explore dent repair, panel restoration and color matching. Open Paint doors to preview a finish on the BMW.'],
     ['oil', 'Oil Change', 'Oil', 'Replace oil and filter using the specifications for your vehicle.'],
     ['maintenance', 'General Maintenance', 'Maintenance', 'Plan scheduled care for fluids, filters, belts and other wear items.'],
   ],

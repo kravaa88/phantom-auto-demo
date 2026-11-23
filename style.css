@@ -157,3 +157,12 @@ dialog{max-width:min(520px,calc(100% - 32px));border:1px solid #4c4f52;border-ra
   .paint-tools button{min-height:40px}
 }
 .paint-actions{flex-wrap:wrap;align-items:center}
+
+.marker[data-part="paint"] small,.marker[data-part="bodywork"] small{border-color:#ff9b52;background:#27180e}
+@media(max-width:760px){
+  .inspecting .marker[data-part="paint"]:not(:hover,:focus-visible) small,
+  .inspecting .marker[data-part="bodywork"]:not(:hover,:focus-visible) small{display:none}
+  .inspecting .marker[data-part="paint"] small{top:100%;bottom:auto}
+  .inspecting .marker[data-part="bodywork"] small{top:auto;bottom:100%;translate:-56% 4px}
+}
+.hero::after{content:"";position:absolute;z-index:2;inset:auto 0 0;height:27%;pointer-events:none;background:linear-gradient(transparent,#130e0bcf)}

@@ -2,6 +2,44 @@ import * as T from 'three';
 import { mergeGeometries } from './assets/BufferGeometryUtils.js';
 import { gateX } from './arrival.js';
 
+function canvasTexture(size, draw) {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  draw(canvas.getContext('2d'), size);
+  const texture = new T.CanvasTexture(canvas);
+  texture.colorSpace = T.SRGBColorSpace;
+  texture.anisotropy = 4;
+  return texture;
+}
+
+function polishedConcrete() {
+  const texture = canvasTexture(512, (ctx, size) => {
+    let seed = 8471;
+    const random = () => {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      return seed / 4294967296;
+    };
+    ctx.fillStyle = '#b9b8b6';
+    ctx.fillRect(0, 0, size, size);
+    for (let i = 0; i < 29000; i++) {
+      ctx.fillStyle = random() < 0.53 ? '#37363422' : '#efede744';
+      ctx.fillRect(random() * size, random() * size, 0.6 + random() * 1.9, 0.5 + random() * 1.25);
+    }
+    for (let i = 0; i < 22; i++) {
+      const x = random() * size;
+      const y = random() * size;
+      const radius = 10 + random() * 32;
+      const shade = ctx.createRadialGradient(x, y, 0, x, y, radius);
+      shade.addColorStop(0, '#1f1e191a');
+      shade.addColorStop(1, '#1f1e1900');
+      ctx.fillStyle = shade;
+      ctx.fillRect(x - radius, y - radius, 2 * radius, 2 * radius);
+    }
+  });
+  texture.wrapS = texture.wrapT = T.RepeatWrapping;
+  texture.repeat.set(9, 12);
+  return texture;
+}
 export function mountWorkshop(scene) {
   scene.background = new T.Color('#100e0d');
   scene.fog = new T.FogExp2('#100e0d', 0.045);
@@ -10,6 +48,11 @@ export function mountWorkshop(scene) {
   scene.add(room);
   const steel = new T.MeshStandardMaterial({ color: '#28282a', metalness: 0.35, roughness: 0.62 });
   const concrete = new T.MeshStandardMaterial({ color: '#22201f', roughness: 0.89 });
+  const floor = new T.MeshStandardMaterial({
+    map: polishedConcrete(), color: '#686966', roughness: 0.49, metalness: 0.14,
+  });
+  const frame = new T.MeshStandardMaterial({ color: '#55595d', metalness: 0.63, roughness: 0.41 });
+  const graphite = new T.MeshStandardMaterial({ color: '#33383d', metalness: 0.22, roughness: 0.55 });
   const black = new T.MeshStandardMaterial({ color: '#101113', roughness: 0.71 });
   const orange = new T.MeshStandardMaterial({ color: '#c45125', metalness: 0.35, roughness: 0.62 });
   const light = new T.MeshBasicMaterial({ color: '#ffe9d4' });
@@ -21,12 +64,23 @@ export function mountWorkshop(scene) {
     return mesh;
   }
 
-  box(32, 0.16, 42, 0, -0.11, -8, concrete);
+  box(32, 0.16, 42, 0, -0.11, -8, floor);
   box(9.6, 4.3, 0.25, -4.2, 2.14, -8, steel);
   box(3.4, 4.3, 0.25, 7.3, 2.14, -8, steel);
   box(5, 1.25, 0.27, gateX, 4.02, -8, steel);
   box(0.1, 3.5, 0.35, gateX - 2.45, 1.75, -7.91, orange);
   box(0.1, 3.5, 0.35, gateX + 2.45, 1.75, -7.91, orange);
+  box(18, 0.19, 13.8, 0, 4.35, -1.1, graphite);
+  for (const z of [-6.9, -3.4, 0.2, 3.9]) {
+    box(18, 0.19, 0.26, 0, 4.13, z, black);
+    box(9.8, 0.035, 0.12, -0.72, 4.023, z, light);
+  }
+  for (const x of [-7.7, -5.85, -3.98, -2.08, -0.25, 6.02, 7.87]) {
+    box(0.04, 4.22, 0.045, x, 2.11, -7.851, frame);
+  }
+  box(8.9, 0.078, 0.088, -4.15, 2.93, -7.8, light);
+  box(8.9, 0.19, 0.12, -4.15, 0.16, -7.77, black);
+  box(2.72, 0.058, 0.088, 7.25, 2.93, -7.8, light);
   const shutter = new T.Group();
   shutter.position.x = gateX;
   room.add(shutter);
@@ -47,7 +101,14 @@ export function mountWorkshop(scene) {
       box(3.3, 0.045, 0.1, side * 2.8, 3.99, z, light);
     }
     const x = side < 0 ? -3.5 : 7.35;
-    box(2.05, 0.87, 0.74, x, 0.48, -6.5, orange);
+    box(2.05, 0.87, 0.74, x, 0.48, -6.5, graphite);
+    box(0.045, 0.77, 0.035, x - 0.95, 0.48, -6.11, orange);
+    box(0.045, 0.77, 0.035, x + 0.95, 0.48, -6.11, orange);
+    box(1.82, 0.59, 0.52, x, 2.67, -7.08, graphite);
+    box(1.8, 0.034, 0.04, x, 2.38, -6.79, frame);
+    box(0.024, 0.51, 0.028, x, 2.7, -6.79, black);
+    box(0.57, 0.027, 0.032, x - 0.45, 2.5, -6.77, frame);
+    box(0.57, 0.027, 0.032, x + 0.45, 2.5, -6.77, frame);
     box(2.16, 0.1, 0.85, x, 0.97, -6.5, black);
     box(2.06, 1.2, 0.08, x, 1.67, -6.87, black);
     for (let drawer = 0; drawer < 4; drawer++) {
@@ -67,6 +128,24 @@ export function mountWorkshop(scene) {
   box(20, 8, 0.12, gateX, 3, -23, dusk);
   box(0.1, 2.7, 0.17, gateX + 2.13, 1.35, -9.5, light);
   box(0.1, 2.7, 0.17, gateX - 2.13, 1.35, -9.5, light);
+  const floorLight = new T.MeshBasicMaterial({
+    map: canvasTexture(128, (ctx, size) => {
+      const mid = size / 2;
+      const pool = ctx.createRadialGradient(mid, mid, 1, mid, mid, mid);
+      pool.addColorStop(0, '#fff1cc56');
+      pool.addColorStop(0.45, '#fff1cc28');
+      pool.addColorStop(1, '#fff1cc00');
+      ctx.fillStyle = pool;
+      ctx.fillRect(0, 0, size, size);
+    }),
+    transparent: true, depthWrite: false, blending: T.AdditiveBlending, opacity: 0.34,
+  });
+  for (const [x, z] of [[-3, -6], [3, -5], [0, -1.6], [0, 1.4]]) {
+    const pool = new T.Mesh(new T.PlaneGeometry(6.3, 4.8), floorLight);
+    pool.rotation.x = -Math.PI / 2;
+    pool.position.set(x, -0.0285, z);
+    room.add(pool);
+  }
   // Batch static fittings by material and keep the rolling gate independent.
   for (const parent of [room, shutter]) {
     const materials = new Map();

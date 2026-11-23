@@ -2,10 +2,15 @@ import * as T from 'three';
 
 const roomAngle = Math.atan2(0.73, 0.68);
 export const gateX = 3.1;
-const route = new T.CatmullRomCurve3([
-  [gateX + 0.76, -17], [gateX + 0.72, -10], [gateX + 0.55, -7.9],
-  [gateX + 0.23, -5.45], [2.15, -2.7], [0, 0],
-].map(([x, z]) => new T.Vector3(x, 0, z).applyAxisAngle(T.Object3D.DEFAULT_UP, roomAngle)));
+const stopApproach = 2.4;
+const toWorld = (x, z) => new T.Vector3(x, 0, z).applyAxisAngle(T.Object3D.DEFAULT_UP, roomAngle);
+const route = new T.CubicBezierCurve3(
+  toWorld(gateX + 0.76, -17),
+  toWorld(gateX + 1.1, -10.7),
+  toWorld(stopApproach, -stopApproach / Math.tan(roomAngle)),
+  toWorld(0, 0),
+);
+route.arcLengthDivisions = 300;
 const totalDistance = route.getLength();
 
 export function mountArrival(car, rig) {

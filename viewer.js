@@ -14,6 +14,8 @@ const anchors = {
   brakes: [0.96, 0.35, 1.36],
   tires: [0.98, 0.38, -1.37],
   diagnostics: [0.37, 1.11, 0.4],
+  paint: [0.92, 0.58, 0.18],
+  bodywork: [0.91, 0.89, -1.52],
 };
 
 export async function initViewer(services, openService, showFallback) {
@@ -29,7 +31,16 @@ export async function initViewer(services, openService, showFallback) {
   const scene = new THREE.Scene();
   const closeDoor = mountWorkshop(scene);
   const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, matchMedia('(pointer: coarse)').matches ? 1.35 : 1.7));
+  const touch = matchMedia('(pointer: coarse)').matches;
+  let renderRatio = 0;
+  function updateRenderRatio(moving) {
+    const ratio = Math.min(window.devicePixelRatio || 1, moving ? (touch ? 1.05 : 1.35) : (touch ? 1.45 : 1.85));
+    if (ratio !== renderRatio) {
+      renderRatio = ratio;
+      renderer.setPixelRatio(ratio);
+    }
+  }
+  updateRenderRatio(true);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.02;
   const environment = new RoomEnvironment();
@@ -101,7 +112,8 @@ export async function initViewer(services, openService, showFallback) {
   const hood = await mountHood(car, rig);
   const drive = mountArrival(car, rig);
 
-  const markers = Object.entries(anchors).filter(([id]) => services.has(id)).map(([id, anchor]) => {
+  const markers = Object.entries(anchors).filter(([id]) => id === 'paint' || services.has(id)).map(([id, anchor]) => {
+    const labelText = id === 'paint' ? 'Paint doors' : services.get(id).part;
     const button = document.createElement('button');
     const symbol = document.createElement('span');
     symbol.textContent = '+';
@@ -109,13 +121,13 @@ export async function initViewer(services, openService, showFallback) {
     button.type = 'button';
     button.className = 'marker';
     button.dataset.part = id;
-    button.setAttribute('aria-label', services.get(id).part + ' — ' + services.get(id).title);
-    button.title = services.get(id).part;
+    button.setAttribute('aria-label', labelText);
+    button.title = labelText;
     const label = document.createElement('small');
-    label.textContent = services.get(id).part;
+    label.textContent = labelText;
     label.setAttribute('aria-hidden', 'true');
     button.append(symbol, label);
-    button.onclick = () => openService(id);
+    button.onclick = () => id === 'paint' ? document.getElementById('paint-toggle').click() : openService(id);
     document.getElementById('markers').append(button);
     return { id, button, anchor: new THREE.Vector3(...anchor) };
   });
@@ -140,13 +152,14 @@ export async function initViewer(services, openService, showFallback) {
     yaw = motion.matches ? targetYaw : THREE.MathUtils.lerp(yaw, targetYaw, 0.25);
     if (Math.abs(targetYaw - yaw) < 0.001) yaw = targetYaw;
     const animate = !motion.matches;
-    const intro = animate && !entranceDone ? THREE.MathUtils.clamp((now - entranceStarted) / 4900, 0, 1) : 1;
+    const intro = animate && !entranceDone ? THREE.MathUtils.clamp((now - entranceStarted) / 5800, 0, 1) : 1;
     entranceDone ||= intro === 1 || stage > 0.04 || paintSide !== 0;
-    const arrival = entranceDone ? 1 : THREE.MathUtils.smootherstep(intro, 0, 0.89);
-    const closure = entranceDone ? 1 : THREE.MathUtils.smoothstep(intro, 0.58, 0.96);
+    const arrival = entranceDone ? 1 : THREE.MathUtils.smootherstep(intro, 0, 0.92);
+    const closure = entranceDone ? 1 : THREE.MathUtils.smootherstep(intro, 0.61, 0.99);
     const lift = paintSide ? 0 : THREE.MathUtils.smoothstep(stage, 0.1, 0.68);
     const inspectionAngle = 0.24 * lift;
-    const heading = drive(arrival) * (1 - THREE.MathUtils.smoothstep(arrival, 0.84, 1));
+    const heading = drive(arrival);
+    updateRenderRatio(arrival < 1 || yaw !== targetYaw);
     rig.rotation.y = paintSide ? Math.atan2(0.73, 0.68) - paintSide * Math.PI / 2 : yaw + inspectionAngle + heading;
     hood.rotation.x = -1.02 * lift;
     closeDoor(closure);
@@ -154,8 +167,11 @@ export async function initViewer(services, openService, showFallback) {
     progress.hidden = paintSide !== 0 || !animate || stage > 0.49;
     const distance = baseDistance * (1 + lift * (narrow ? 0.065 : 0.075));
     camera.position.set(distance * 0.73, distance * (0.24 + lift * 0.13), distance * 0.68);
-        camera.zoom = paintSide ? (narrow ? 2.35 : 1.82) : 1;
-    camera.updateProjectionMatrix();
+        const zoom = paintSide ? (narrow ? 2.35 : 1.82) : 1;
+    if (zoom !== camera.zoom) {
+      camera.zoom = zoom;
+      camera.updateProjectionMatrix();
+    }
     camera.lookAt(0, paintSide ? 0.65 : (narrow ? 0.69 : 0.86) + lift * 0.13, 0);
     renderer.render(scene, camera);
     for (const { id, button, anchor } of markers) {
