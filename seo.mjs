@@ -12,7 +12,7 @@ const files = ['index.html', 'style.css', ...modules, ...assets];
 const fingerprint = createHash('sha256');
 for (const file of files) fingerprint.update(file).update(await readFile(file));
 const revision = fingerprint.digest('hex').slice(0, 12);
-const versionPaths = (content) => content.replace(/(["'])(\.{1,2}\/[^"'\s]+\.(?:js|css|webp|svg|glb|bin|json))\1/g,
+const versionPaths = (content) => content.replace(/(["'])(\.{1,2}\/[^"'\s]+\.(?:js|css|webp|jpg|hdr|svg|glb|bin|json))\1/g,
   (_, quote, path) => quote + path + '?v=' + revision + quote);
 
 await mkdir('dist', { recursive: true });

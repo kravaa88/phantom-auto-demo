@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from './assets/GLTFLoader.js';
 import { MeshoptDecoder } from './assets/meshopt_decoder.module.js';
 import { RoomEnvironment } from './assets/RoomEnvironment.js';
+import { RGBELoader } from './assets/RGBELoader.js';
 import { mountHood } from './hood.js';
 import { factoryPaint, mountPaint } from './paint.js';
 import { mountWorkshop } from './workshop.js';
@@ -30,18 +31,39 @@ export async function initViewer(services, openService, showFallback) {
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
   const scene = new THREE.Scene();
   const touch = matchMedia('(pointer: coarse)').matches;
-  const { closeDoor, emitters } = mountWorkshop(scene, touch);
+  const imageLoader = new THREE.TextureLoader();
+  const [color, normal, studio] = await Promise.all([
+    imageLoader.loadAsync(new URL('./assets/concrete-color.jpg', import.meta.url).href).catch(() => null),
+    imageLoader.loadAsync(new URL('./assets/concrete-normal.jpg', import.meta.url).href).catch(() => null),
+    new RGBELoader().loadAsync(new URL('./assets/studio-light.hdr', import.meta.url).href).catch(() => null),
+  ]);
+  if (color) color.colorSpace = THREE.SRGBColorSpace;
+  for (const texture of [color, normal]) {
+    if (!texture) continue;
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(15, 20);
+    texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  }
+  const { closeDoor, emitters } = mountWorkshop(scene, touch, { color, normal });
   const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, touch ? 1.15 : 1.5));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.02;
-  const environment = new RoomEnvironment();
+  renderer.toneMappingExposure = 0.98;
+  renderer.shadowMap.enabled = !touch;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  const environment = studio ? new THREE.Scene() : new RoomEnvironment();
+  if (studio) {
+    studio.mapping = THREE.EquirectangularReflectionMapping;
+    environment.background = studio;
+    environment.backgroundIntensity = 0.78;
+  }
   environment.add(emitters);
   const pmrem = new THREE.PMREMGenerator(renderer);
   const reflections = pmrem.fromScene(environment, 0.016);
   scene.environment = reflections.texture;
   scene.environmentIntensity = 0.86;
-  environment.dispose();
+  environment.dispose?.();
+  studio?.dispose();
   pmrem.dispose();
 
   scene.add(new THREE.HemisphereLight(0xdce7ff, 0x464049, 1.35));
@@ -49,8 +71,14 @@ export async function initViewer(services, openService, showFallback) {
     const light = new THREE.DirectionalLight(color, intensity);
     light.position.set(x, y, z);
     scene.add(light);
+    return light;
   }
-  addLight(0xe4f1ff, 2.2, -3, 6, 3);
+  const key = addLight(0xe4f1ff, 2.0, -3, 6, 3);
+  key.castShadow = !touch;
+  key.shadow.mapSize.set(1024, 1024);
+  Object.assign(key.shadow.camera, { left: -5, right: 5, top: 5, bottom: -5, near: 0.2, far: 19 });
+  key.shadow.camera.updateProjectionMatrix();
+  key.shadow.normalBias = 0.025;
   addLight(0xff995a, 1.35, 4, 4, -4);
   addLight(0xffe2b1, 0.65, 1, 2, 6);
 
@@ -105,6 +133,9 @@ export async function initViewer(services, openService, showFallback) {
   });
   const hood = await mountHood(car, rig);
   const drive = mountArrival(car, rig);
+  rig.traverse((part) => {
+    if (part !== shadow && part.isMesh && part.visible && !part.material.transparent) part.castShadow = true;
+  });
 
   const markers = Object.entries(anchors).filter(([id]) => id === 'paint' || services.has(id)).map(([id, anchor]) => {
     const labelText = id === 'paint' ? 'Paint doors' : services.get(id).part;
@@ -160,13 +191,20 @@ export async function initViewer(services, openService, showFallback) {
     story.classList.toggle('inspecting', stage > 0.44);
     progress.hidden = paintSide !== 0 || !animate || stage > 0.49;
     const distance = baseDistance * (1 + lift * (narrow ? 0.065 : 0.075));
-    camera.position.set(distance * 0.73, distance * (0.24 + lift * 0.13), distance * 0.68);
+    // A small, damped camera drift settles to the exact interactive framing.
+    const envelope = 1 - THREE.MathUtils.smootherstep(intro, 0.22, 0.87);
+    const swing = (0.14 + 0.018 * Math.sin(intro * 19)) * envelope;
+    const cameraDistance = distance * (1 + 0.058 * envelope);
+    camera.position.set(cameraDistance * 0.73 + 0.68 * swing,
+      cameraDistance * (0.24 + lift * 0.13) - 0.16 * envelope,
+      cameraDistance * 0.68 - 0.73 * swing);
         const zoom = paintSide ? (narrow ? 2.35 : 1.82) : 1;
     if (zoom !== camera.zoom) {
       camera.zoom = zoom;
       camera.updateProjectionMatrix();
     }
-    camera.lookAt(0, paintSide ? 0.65 : (narrow ? 0.69 : 0.86) + lift * 0.13, 0);
+    const glance = (narrow ? 0.25 : 0.45) * envelope;
+    camera.lookAt(0.68 * glance, paintSide ? 0.65 : (narrow ? 0.69 : 0.86) + lift * 0.13, -0.73 * glance);
     renderer.render(scene, camera);
     for (const { id, button, anchor } of markers) {
       projected.copy(anchor);

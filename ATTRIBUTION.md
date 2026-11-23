@@ -11,3 +11,8 @@ SHA-256 of `assets/bmw-m4.glb` is `9379539798ba1a3d79ebe52d52469778af6334e8261e8
 BMW model names and marks identify the depicted vehicle. PHANTOM AUTO is a PHNX Web Studio concept.
 
 Three.js 0.170.0 and its bundled loader, environment, reflector and decoder are distributed under the accompanying notices in `assets`. The GLTFLoader utility import path was adjusted for this site's static layout.
+
+## Lighting and floor photography
+
+- [Blocky Photo Studio](https://polyhaven.com/a/blocky_photo_studio) by Sergej Majboroda, CC0. The HDR photograph provides the ambient light and reflections.
+- [Concrete Floor](https://polyhaven.com/a/concrete_floor) by eye-candy.xyz, CC0. The photograph and normal map are tiled on the 3D floor.

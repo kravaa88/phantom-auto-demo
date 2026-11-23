@@ -58,7 +58,7 @@ const floorShader = {
     .replace('gl_FragColor = vec4( blendOverlay( base.rgb, color ), 1.0 );',
       'gl_FragColor = vec4(reflection * color, mix(0.10, 0.40, smoothstep(0.16, 1.0, brightness)));'),
 };
-export function mountWorkshop(scene, touch) {
+export function mountWorkshop(scene, touch, floorMaps) {
   scene.background = new T.Color('#100e0d');
   scene.fog = new T.FogExp2('#100e0d', 0.045);
   const room = new T.Group();
@@ -67,7 +67,8 @@ export function mountWorkshop(scene, touch) {
   const steel = new T.MeshStandardMaterial({ color: '#28282a', metalness: 0.35, roughness: 0.62 });
   const concrete = new T.MeshStandardMaterial({ color: '#22201f', roughness: 0.89 });
   const floor = new T.MeshStandardMaterial({
-    map: polishedConcrete(), color: '#686966', roughness: 0.49, metalness: 0.14,
+    map: floorMaps.color || polishedConcrete(), normalMap: floorMaps.normal || null,
+    normalScale: new T.Vector2(0.26, 0.26), color: '#87827d', roughness: 0.46, metalness: 0.09,
   });
   const frame = new T.MeshStandardMaterial({ color: '#55595d', metalness: 0.63, roughness: 0.41 });
   const graphite = new T.MeshStandardMaterial({ color: '#33383d', metalness: 0.22, roughness: 0.55 });
@@ -183,7 +184,9 @@ export function mountWorkshop(scene, touch) {
       parent.remove(mesh);
     }
     for (const [material, geometries] of materials) {
-      parent.add(new T.Mesh(mergeGeometries(geometries), material));
+      const fitted = new T.Mesh(mergeGeometries(geometries), material);
+      fitted.receiveShadow = material === floor;
+      parent.add(fitted);
       geometries.forEach((geometry) => geometry.dispose());
     }
   }
