@@ -1,6 +1,7 @@
 import * as T from 'three';
 import { mergeGeometries } from './assets/BufferGeometryUtils.js';
 import { gateX } from './arrival.js';
+import { Reflector } from './assets/Reflector.js';
 
 function canvasTexture(size, draw) {
   const canvas = document.createElement('canvas');
@@ -40,7 +41,24 @@ function polishedConcrete() {
   texture.repeat.set(9, 12);
   return texture;
 }
-export function mountWorkshop(scene) {
+const floorShader = {
+  ...Reflector.ReflectorShader,
+  uniforms: { ...Reflector.ReflectorShader.uniforms, texel: { value: new T.Vector2() } },
+  fragmentShader: Reflector.ReflectorShader.fragmentShader
+    .replace('uniform vec3 color;', 'uniform vec3 color; uniform vec2 texel;')
+    .replace('vec4 base = texture2DProj( tDiffuse, vUv );', `
+      vec2 uv = vUv.xy / vUv.w;
+      vec3 reflection = texture2D(tDiffuse, uv).rgb * 0.28;
+      reflection += texture2D(tDiffuse, uv + texel * vec2(2.2, 0.0)).rgb * 0.18;
+      reflection += texture2D(tDiffuse, uv - texel * vec2(2.2, 0.0)).rgb * 0.18;
+      reflection += texture2D(tDiffuse, uv + texel * vec2(0.0, 3.1)).rgb * 0.18;
+      reflection += texture2D(tDiffuse, uv - texel * vec2(0.0, 3.1)).rgb * 0.18;
+      float brightness = dot(reflection, vec3(0.2126, 0.7152, 0.0722));
+    `)
+    .replace('gl_FragColor = vec4( blendOverlay( base.rgb, color ), 1.0 );',
+      'gl_FragColor = vec4(reflection * color, mix(0.10, 0.40, smoothstep(0.16, 1.0, brightness)));'),
+};
+export function mountWorkshop(scene, touch) {
   scene.background = new T.Color('#100e0d');
   scene.fog = new T.FogExp2('#100e0d', 0.045);
   const room = new T.Group();
@@ -55,12 +73,20 @@ export function mountWorkshop(scene) {
   const graphite = new T.MeshStandardMaterial({ color: '#33383d', metalness: 0.22, roughness: 0.55 });
   const black = new T.MeshStandardMaterial({ color: '#101113', roughness: 0.71 });
   const orange = new T.MeshStandardMaterial({ color: '#c45125', metalness: 0.35, roughness: 0.62 });
-  const light = new T.MeshBasicMaterial({ color: '#ffe9d4' });
+  const light = new T.MeshBasicMaterial({ color: '#fff0dd', toneMapped: false });
+  const emitters = new T.Group();
+  emitters.rotation.copy(room.rotation);
+  const radiance = new T.MeshBasicMaterial({ color: new T.Color('#fff2df').multiplyScalar(13) });
   const amber = new T.MeshBasicMaterial({ color: '#b2683e' });
   function box(w, h, d, x, y, z, material, parent = room) {
     const mesh = new T.Mesh(new T.BoxGeometry(w, h, d), material);
     mesh.position.set(x, y, z);
     parent.add(mesh);
+    if (material === light) {
+      const emitter = new T.Mesh(mesh.geometry.clone(), radiance);
+      emitter.position.copy(mesh.position);
+      emitters.add(emitter);
+    }
     return mesh;
   }
 
@@ -161,5 +187,21 @@ export function mountWorkshop(scene) {
       geometries.forEach((geometry) => geometry.dispose());
     }
   }
-  return (closed) => { shutter.position.y = 1.73 + (1 - closed) * 3.48; };
+  const side = touch ? 320 : 512;
+  const mirror = new Reflector(new T.PlaneGeometry(32, 42), {
+    textureWidth: side * 2, textureHeight: side, clipBias: 0.002, multisample: 0,
+    color: '#e9decc', shader: floorShader,
+  });
+  mirror.material.uniforms.texel.value.set(1 / (side * 2), 1 / side);
+  mirror.material.transparent = true;
+  mirror.material.depthWrite = false;
+  mirror.rotation.x = -Math.PI / 2;
+  mirror.position.set(0, -0.029, -8);
+  mirror.renderOrder = 1;
+  room.add(mirror);
+
+  return {
+    emitters,
+    closeDoor(closed) { shutter.position.y = 1.73 + (1 - closed) * 3.48; },
+  };
 }

@@ -5,7 +5,7 @@ import { RoomEnvironment } from './assets/RoomEnvironment.js';
 import { mountHood } from './hood.js';
 import { factoryPaint, mountPaint } from './paint.js';
 import { mountWorkshop } from './workshop.js';
-import { mountArrival } from './arrival.js';
+import { arrivalDistance, mountArrival } from './arrival.js';
 import { offerGarageSound } from './garage-audio.js';
 
 // Anchors use the normalized GLB coordinates. The front bumper is at +Z.
@@ -29,24 +29,18 @@ export async function initViewer(services, openService, showFallback) {
   const right = document.getElementById('turn-right');
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
   const scene = new THREE.Scene();
-  const closeDoor = mountWorkshop(scene);
-  const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
   const touch = matchMedia('(pointer: coarse)').matches;
-  let renderRatio = 0;
-  function updateRenderRatio(moving) {
-    const ratio = Math.min(window.devicePixelRatio || 1, moving ? (touch ? 1.05 : 1.35) : (touch ? 1.45 : 1.85));
-    if (ratio !== renderRatio) {
-      renderRatio = ratio;
-      renderer.setPixelRatio(ratio);
-    }
-  }
-  updateRenderRatio(true);
+  const { closeDoor, emitters } = mountWorkshop(scene, touch);
+  const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, touch ? 1.15 : 1.5));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.02;
   const environment = new RoomEnvironment();
+  environment.add(emitters);
   const pmrem = new THREE.PMREMGenerator(renderer);
-  const reflections = pmrem.fromScene(environment, 0.04);
+  const reflections = pmrem.fromScene(environment, 0.016);
   scene.environment = reflections.texture;
+  scene.environmentIntensity = 0.86;
   environment.dispose();
   pmrem.dispose();
 
@@ -134,7 +128,7 @@ export async function initViewer(services, openService, showFallback) {
 
   const motion = matchMedia('(prefers-reduced-motion: reduce)');
   const projected = new THREE.Vector3();
-  let entranceStarted = performance.now();
+  let entranceStarted;
   let entranceDone = false;
   let stage = 0;
   let baseDistance = 7;
@@ -151,15 +145,15 @@ export async function initViewer(services, openService, showFallback) {
     frame = 0;
     yaw = motion.matches ? targetYaw : THREE.MathUtils.lerp(yaw, targetYaw, 0.25);
     if (Math.abs(targetYaw - yaw) < 0.001) yaw = targetYaw;
+    entranceStarted ??= now;
     const animate = !motion.matches;
-    const intro = animate && !entranceDone ? THREE.MathUtils.clamp((now - entranceStarted) / 5800, 0, 1) : 1;
+    const intro = animate && !entranceDone ? THREE.MathUtils.clamp((now - entranceStarted) / 6250, 0, 1) : 1;
     entranceDone ||= intro === 1 || stage > 0.04 || paintSide !== 0;
-    const arrival = entranceDone ? 1 : THREE.MathUtils.smootherstep(intro, 0, 0.92);
-    const closure = entranceDone ? 1 : THREE.MathUtils.smootherstep(intro, 0.61, 0.99);
+    const arrival = entranceDone ? 1 : arrivalDistance(Math.min(1, intro / 0.95));
+    const closure = entranceDone ? 1 : THREE.MathUtils.smootherstep(intro, 0.64, 1);
     const lift = paintSide ? 0 : THREE.MathUtils.smoothstep(stage, 0.1, 0.68);
     const inspectionAngle = 0.24 * lift;
     const heading = drive(arrival);
-    updateRenderRatio(arrival < 1 || yaw !== targetYaw);
     rig.rotation.y = paintSide ? Math.atan2(0.73, 0.68) - paintSide * Math.PI / 2 : yaw + inspectionAngle + heading;
     hood.rotation.x = -1.02 * lift;
     closeDoor(closure);
@@ -269,7 +263,7 @@ export async function initViewer(services, openService, showFallback) {
     window.scrollTo({ top: 0, behavior: 'instant' });
     if (paint.active()) document.getElementById('paint-toggle').click();
     targetYaw = yaw = 0;
-    entranceStarted = performance.now();
+    entranceStarted = undefined;
     entranceDone = false;
     updateStage();
   };

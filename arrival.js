@@ -13,6 +13,18 @@ const route = new T.CubicBezierCurve3(
 route.arcLengthDivisions = 300;
 const totalDistance = route.getLength();
 
+export function arrivalDistance(time) {
+  const accelerate = 0.25;
+  const brake = 0.59;
+  const brakeTime = 1 - brake;
+  const total = accelerate / 2 + brake - accelerate + brakeTime / 2;
+  if (time <= accelerate) {
+    return (time - accelerate / Math.PI * Math.sin(Math.PI * time / accelerate)) / (2 * total);
+  }
+  if (time < brake) return (time - accelerate / 2) / total;
+  const t = time - brake;
+  return Math.min(1, (brake - accelerate / 2 + (t + brakeTime / Math.PI * Math.sin(Math.PI * t / brakeTime)) / 2) / total);
+}
 export function mountArrival(car, rig) {
   rig.updateMatrixWorld(true);
   const wheelMeshes = [car.getObjectByName('Object_33'), car.getObjectByName('Object_34')];

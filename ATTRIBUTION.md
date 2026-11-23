@@ -10,4 +10,4 @@ SHA-256 of `assets/bmw-m4.glb` is `9379539798ba1a3d79ebe52d52469778af6334e8261e8
 
 BMW model names and marks identify the depicted vehicle. PHANTOM AUTO is a PHNX Web Studio concept.
 
-Three.js 0.170.0 and its bundled loader, environment and decoder are distributed under the accompanying notices in `assets`. The GLTFLoader utility import path was adjusted for this site's static layout.
+Three.js 0.170.0 and its bundled loader, environment, reflector and decoder are distributed under the accompanying notices in `assets`. The GLTFLoader utility import path was adjusted for this site's static layout.
