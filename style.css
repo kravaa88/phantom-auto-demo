@@ -128,3 +128,8 @@ dialog{max-width:min(520px,calc(100% - 32px));border:1px solid #4c4f52;border-ra
   .service-grid button { padding: 10px; }
   .service-grid strong { font-size: .89rem; line-height: 1.2; }
 }
+.marker:is(:hover, :focus-visible) { z-index: 2; }
+@media (max-width: 760px) {
+  .marker[data-part="engine"] small { top: auto; bottom: 100%; translate: -50% 4px; }
+  .marker[data-part="diagnostics"] small { left: 34%; }
+}

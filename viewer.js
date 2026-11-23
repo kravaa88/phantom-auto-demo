@@ -95,6 +95,7 @@ export async function initViewer(services, openService, showFallback) {
     symbol.setAttribute('aria-hidden', 'true');
     button.type = 'button';
     button.className = 'marker';
+    button.dataset.part = id;
     button.setAttribute('aria-label', services.get(id).part + ' — ' + services.get(id).title);
     button.title = services.get(id).part;
     const label = document.createElement('small');
