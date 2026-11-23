@@ -7,6 +7,9 @@ import { mountHood } from './hood.js';
 import { factoryPaint, mountPaint } from './paint.js';
 import { mountWorkshop } from './workshop.js';
 import { arrivalDistance, mountArrival } from './arrival.js';
+import { mountArrivalFilm } from './arrival-film.js';
+const portraitAspect = 0.5;
+const wideAspect = 16 / 9;
 import { offerGarageSound } from './garage-audio.js';
 
 // Anchors use the normalized GLB coordinates. The front bumper is at +Z.
@@ -126,7 +129,9 @@ export async function initViewer(services, openService, showFallback) {
   });
   rig.add(car);
   let paintSide = 0;
+  let film;
   const paint = await mountPaint(car, rig, camera, canvas, requestDraw, (side) => {
+    film?.finish();
     paintSide = side;
     entranceDone = true;
     requestDraw();
@@ -178,8 +183,10 @@ export async function initViewer(services, openService, showFallback) {
     if (Math.abs(targetYaw - yaw) < 0.001) yaw = targetYaw;
     entranceStarted ??= now;
     const animate = !motion.matches;
-    const intro = animate && !entranceDone ? THREE.MathUtils.clamp((now - entranceStarted) / 6250, 0, 1) : 1;
-    entranceDone ||= intro === 1 || stage > 0.04 || paintSide !== 0;
+    const inFilm = film?.active;
+    const inIntro = animate && !entranceDone && stage <= 0.04 && !paintSide;
+    const intro = inIntro ? (inFilm ? 0 : THREE.MathUtils.clamp((now - entranceStarted) / 6250, 0, 1)) : 1;
+    entranceDone ||= intro === 1;
     const arrival = entranceDone ? 1 : arrivalDistance(Math.min(1, intro / 0.95));
     const closure = entranceDone ? 1 : THREE.MathUtils.smootherstep(intro, 0.64, 1);
     const lift = paintSide ? 0 : THREE.MathUtils.smoothstep(stage, 0.1, 0.68);
@@ -198,13 +205,15 @@ export async function initViewer(services, openService, showFallback) {
     camera.position.set(cameraDistance * 0.73 + 0.68 * swing,
       cameraDistance * (0.24 + lift * 0.13) - 0.16 * envelope,
       cameraDistance * 0.68 - 0.73 * swing);
-        const zoom = paintSide ? (narrow ? 2.35 : 1.82) : 1;
+    const crop = Math.max(1, camera.aspect / (narrow ? portraitAspect : wideAspect));
+    const zoom = paintSide ? (narrow ? 2.35 : 1.82) : crop;
     if (zoom !== camera.zoom) {
       camera.zoom = zoom;
       camera.updateProjectionMatrix();
     }
     const glance = (narrow ? 0.25 : 0.45) * envelope;
     camera.lookAt(0.68 * glance, paintSide ? 0.65 : (narrow ? 0.69 : 0.86) + lift * 0.13, -0.73 * glance);
+    renderer.toneMappingExposure = 0.98 - 0.12 * envelope;
     renderer.render(scene, camera);
     for (const { id, button, anchor } of markers) {
       projected.copy(anchor);
@@ -215,9 +224,9 @@ export async function initViewer(services, openService, showFallback) {
       const y = (1 - projected.y) * height / 2;
       button.style.left = x + 'px';
       button.style.top = y + 'px';
-      button.hidden = paintSide !== 0 || arrival < 0.96 || x < 22 || x > width - 22 || y < 22 || y > height - 22;
+      button.hidden = Boolean(inFilm) || paintSide !== 0 || arrival < 0.96 || x < 22 || x > width - 22 || y < 22 || y > height - 22;
     }
-    if (!entranceDone || yaw !== targetYaw) requestDraw();
+    if ((!entranceDone && !inFilm) || yaw !== targetYaw) requestDraw();
   }
   function requestDraw() {
     if (visible && ready && !frame) frame = requestAnimationFrame(draw);
@@ -228,14 +237,14 @@ export async function initViewer(services, openService, showFallback) {
     if (!width || !height) return;
     camera.aspect = width / height;
     narrow = camera.aspect < 1.02;
-    baseDistance = narrow ? 7.2 / Math.min(1, camera.aspect / 1.02) : 6.7;
+    baseDistance = narrow ? 7.2 * 1.02 / portraitAspect : 6.7;
     camera.updateProjectionMatrix();
     renderer.setSize(width, height, false);
     requestDraw();
   }
 
-  left.onclick = () => { targetYaw -= Math.PI / 5; requestDraw(); };
-  right.onclick = () => { targetYaw += Math.PI / 5; requestDraw(); };
+  left.onclick = () => { film?.finish(); targetYaw -= Math.PI / 5; requestDraw(); };
+  right.onclick = () => { film?.finish(); targetYaw += Math.PI / 5; requestDraw(); };
   left.disabled = right.disabled = false;
   canvas.addEventListener('keydown', (event) => {
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
@@ -256,6 +265,7 @@ export async function initViewer(services, openService, showFallback) {
     const dx = event.clientX - drag.x;
     const dy = event.clientY - drag.y;
     if (!drag.active && (Math.abs(dx) < 7 || Math.abs(dx) <= Math.abs(dy))) return;
+    film?.finish();
     drag.active = true;
     targetYaw = drag.baseline + dx * (2 * Math.PI / width);
     requestDraw();
@@ -271,6 +281,7 @@ export async function initViewer(services, openService, showFallback) {
     const offset = story.getBoundingClientRect().top;
     const runway = inspection.offsetHeight;
     stage = motion.matches || !runway ? 0 : THREE.MathUtils.clamp(-offset / (runway * 0.76), 0, 1);
+    if (stage > 0.04 || motion.matches) film?.finish();
     requestDraw();
   }
   function syncMotion() {
@@ -297,6 +308,15 @@ export async function initViewer(services, openService, showFallback) {
     ready = false;
     showFallback(new Error('WebGL context lost'));
   });
+  function startIntro() {
+    entranceStarted = undefined;
+    entranceDone = false;
+    requestDraw();
+  }
+  film = mountArrivalFilm(document.getElementById('arrival-film'), () => {
+    entranceDone = true;
+    requestDraw();
+  }, startIntro, startIntro);
   document.getElementById('replay-entrance').onclick = () => {
     window.scrollTo({ top: 0, behavior: 'instant' });
     if (paint.active()) document.getElementById('paint-toggle').click();
@@ -304,6 +324,7 @@ export async function initViewer(services, openService, showFallback) {
     entranceStarted = undefined;
     entranceDone = false;
     updateStage();
+    if (!motion.matches) film.play(narrow);
   };
   const exportButton = document.getElementById('export-frame');
   const gl = renderer.getContext();
@@ -355,4 +376,5 @@ export async function initViewer(services, openService, showFallback) {
   controls.hidden = false;
   resize();
   document.getElementById('load-state').hidden = true;
+  if (!motion.matches && stage <= 0.04) film.play(narrow);
 }

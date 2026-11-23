@@ -24,3 +24,7 @@ The booking endpoint receives a JSON POST with service, name, email, date and no
 Push this folder as the root of the new repository. Select **GitHub Actions** under **Settings → Pages → Build and deployment → Source**. Run the **Deploy GitHub Pages** workflow or push to `main`. The workflow builds with the site base returned by GitHub Pages and deploys `dist/`.
 
 For another static host, run `node seo.mjs https://your-host.example/path/` and serve the generated `dist/` directory over HTTPS.
+
+## Arrival clips
+
+The landing scene plays a muted H.264 MP4 rendered from the same car, garage and camera as the interactive viewer. The layout picks the landscape or portrait clip and uses the corresponding camera projection to match the last frame. Reduced-motion mode goes directly to the interactive view. If playback is unavailable, the existing real-time animation runs. Re-render both clips if changing the initial camera, garage lighting, car paint or arrival animation.

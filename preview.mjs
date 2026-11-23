@@ -5,7 +5,7 @@ import { resolve, extname, sep } from 'node:path';
 const root = resolve('dist');
 const types = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript',
-  '.glb': 'model/gltf-binary', '.webp': 'image/webp', '.svg': 'image/svg+xml',
+  '.glb': 'model/gltf-binary', '.mp4': 'video/mp4', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml',
   '.xml': 'application/xml', '.md': 'text/plain; charset=utf-8', '.txt': 'text/plain',
 };
 createServer(async (request, response) => {

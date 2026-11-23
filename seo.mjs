@@ -6,13 +6,13 @@ const target = new URL(process.argv[2] || 'http://localhost:4173/');
 if (!['http:', 'https:'].includes(target.protocol) || /[?#]/.test(target.href)) throw new Error('Provide the full site base URL.');
 if (!target.pathname.endsWith('/')) target.pathname += '/';
 
-const modules = ['main.js', 'viewer.js', 'paint.js', 'workshop.js', 'arrival.js', 'hood.js', 'garage-audio.js', 'config.js'];
+const modules = ['main.js', 'viewer.js', 'paint.js', 'workshop.js', 'arrival.js', 'arrival-film.js', 'hood.js', 'garage-audio.js', 'config.js'];
 const assets = (await readdir('assets')).sort().map((name) => 'assets/' + name);
 const files = ['index.html', 'style.css', ...modules, ...assets];
 const fingerprint = createHash('sha256');
 for (const file of files) fingerprint.update(file).update(await readFile(file));
 const revision = fingerprint.digest('hex').slice(0, 12);
-const versionPaths = (content) => content.replace(/(["'])(\.{1,2}\/[^"'\s]+\.(?:js|css|webp|jpg|hdr|svg|glb|bin|json))\1/g,
+const versionPaths = (content) => content.replace(/(["'])(\.{1,2}\/[^"'\s]+\.(?:js|css|webp|mp4|jpg|hdr|svg|glb|bin|json))\1/g,
   (_, quote, path) => quote + path + '?v=' + revision + quote);
 
 await mkdir('dist', { recursive: true });
