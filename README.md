@@ -27,4 +27,4 @@ For another static host, run `node seo.mjs https://your-host.example/path/` and 
 
 ## Arrival clips
 
-The landing scene plays a muted H.264 MP4 rendered from the same car, garage and camera as the interactive viewer. The layout picks the landscape or portrait clip and uses the corresponding camera projection to match the last frame. Reduced-motion mode goes directly to the interactive view. If playback is unavailable, the existing real-time animation runs. Re-render both clips if changing the initial camera, garage lighting, car paint or arrival animation.
+The landing scene plays a muted H.264 MP4. The landscape clip is generated from the opening and closing frames of the interactive scene and ends on the exact closing frame. The portrait clip is rendered directly from that scene. The layout picks the landscape or portrait clip and uses the corresponding camera projection to match the last frame. Reduced-motion mode goes directly to the interactive view. If playback is unavailable, the existing real-time animation runs. Re-render both clips if changing the initial camera, garage lighting, car paint or arrival animation.
