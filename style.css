@@ -17,3 +17,114 @@ dialog{max-width:min(520px,calc(100% - 32px));border:1px solid #4c4f52;border-ra
 @media(max-width:760px){.split{grid-template-columns:1fr}.service-grid{grid-template-columns:1fr 1fr}.top{height:64px}.top nav a:not(.button){display:none}.hero{height:calc(100svh - 64px);min-height:530px}.garage{background:radial-gradient(ellipse at 51% 54%,#3d4347,#1c2227 42%,#090b0f 74%)}}
 @media(max-width:420px){.brand{font-size:.8rem}.service-grid,.fields{grid-template-columns:1fr}.service-grid button{min-height:120px}.hero-bottom a{font-size:.84rem}.demo{font-size:.64rem}.hero-title{top:35px}}
 @media(prefers-reduced-motion:reduce){:root{scroll-behavior:auto}}
+
+/* The garage stays in view while the scroll moves through the inspection. */
+#story { position: relative; }
+.story-active .hero { position: sticky; top: 0; }
+#inspection { height: 0; pointer-events: none; }
+.story-active #inspection { height: clamp(280px, 61svh, 580px); }
+#shutter {
+  --closed: 1;
+  position: absolute;
+  inset: 12% 11% 32%;
+  transform: scaleY(var(--closed));
+  transform-origin: top;
+  background:
+    linear-gradient(90deg, #080a0bcc, transparent 23%, transparent 77%, #080a0bcc),
+    repeating-linear-gradient(0deg, #090b0c 0 1px, #303639 2px, #171b1e 6px, #24292b 16px);
+  border-bottom: 2px solid #68747c;
+  box-shadow: 0 5px 25px #0009;
+  opacity: .69;
+}
+.garage::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 69% 0 0;
+  pointer-events: none;
+  background: linear-gradient(transparent, #08090bbe 91%);
+}
+#car, #poster, #markers { z-index: 1; }
+#markers { z-index: 2; }
+.hero-title, #load-state, #garage-progress, .car-controls, .hero-bottom { z-index: 3; }
+.hero-title h1 { font-size: clamp(3.1rem, 8.8vw, 8.8rem); }
+#garage-progress {
+  position: absolute;
+  bottom: 88px;
+  left: var(--gutter);
+  color: var(--accent);
+  font-size: .83rem;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 6px;
+  letter-spacing: .09em;
+  font-weight: 800;
+  padding: .5rem 0;
+}
+.marker span {
+  width: 24px;
+  height: 24px;
+  font-size: 16px;
+  border: 1px solid var(--accent);
+  background: #141918e8;
+  color: var(--accent);
+  box-shadow: 0 0 0 4px #e9ff5226, 0 1px 12px #000b;
+}
+.marker small {
+  display: none;
+  pointer-events: none;
+  position: absolute;
+  left: calc(50% + 13px);
+  top: 50%;
+  translate: 0 -50%;
+  background: #121615e8;
+  color: #f1f5ed;
+  border: 1px solid #e9ff5261;
+  border-radius: 2px;
+  padding: 3px 7px;
+  white-space: nowrap;
+  font-size: .72rem;
+  letter-spacing: .025em;
+}
+.marker:is(:hover,:focus-visible) small, .inspecting .marker small { display: block; }
+.sound {
+  min-height: 34px;
+  border: 1px solid #ffffff36;
+  border-radius: 3px;
+  background: #151819aa;
+  color: #e7ebe5;
+  padding: 3px 8px;
+  font-size: .75rem;
+}
+.sound:hover { border-color: var(--accent); color: var(--accent); }
+.service-grid { margin: 25px 0 22px; }
+.service-grid button {
+  min-height: 66px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 17px;
+}
+.service-grid strong { font-size: 1rem; }
+.service-grid .service-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 25px;
+  height: 25px;
+  border-radius: 50%;
+  border: 1px solid #e9ff5261;
+  color: var(--accent);
+  font-size: 17px;
+}
+@media (max-width: 760px) {
+  #shutter { inset-inline: 2%; }
+  #garage-progress { bottom: 141px; }
+  .marker small { left: 50%; top: 100%; translate: -50% -4px; }
+  .inspecting .marker:nth-child(3) small { left: 28%; }
+  .hero-bottom { column-gap: 8px; }
+  .hero-bottom a { gap: 5px; font-size: .78rem; }
+  .sound { padding-inline: 5px; font-size: .68rem; }
+  .service-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .service-grid button { padding: 10px; }
+  .service-grid strong { font-size: .89rem; line-height: 1.2; }
+}

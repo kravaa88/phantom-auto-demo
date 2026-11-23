@@ -1,6 +1,6 @@
 # PHANTOM AUTO
 
-An English-language PHNX Web Studio concept for an auto repair website in Elgin, IL. It includes a locally served 3D BMW M4 Competition, service hotspots, an appointment form, a Google Maps location preview and a Google Reviews section.
+An English-language PHNX Web Studio concept for an auto repair website in Elgin, IL. It includes a locally served 3D BMW M4 Competition, a scroll-driven hood inspection, compact service hotspots, opt-in synthesized garage sound, an appointment form, a Google Maps location preview and a Google Reviews section.
 
 ## Local preview
 

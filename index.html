@@ -22,23 +22,27 @@
   <nav aria-label="Main navigation"><a href="#services">Services</a><a href="#visit">Location</a><a class="button compact" href="#booking">Book service</a></nav>
 </header>
 <main>
+  <div id="story">
   <section class="hero" aria-labelledby="car-title">
     <div class="garage" id="garage">
-      <div class="architecture"></div>
+      <div class="architecture"></div><div id="shutter" aria-hidden="true"></div>
       <canvas id="car" tabindex="0" aria-label="Rotate the BMW with the left and right arrow keys"></canvas>
       <img id="poster" src="./assets/bmw-preview.webp" alt="BMW M4 Competition in the digital garage" hidden>
       <div id="markers"></div>
     </div>
     <div class="hero-title"><div class="eyebrow">Digital garage <span></span> Elgin, IL</div><h1 id="car-title">BMW M4<span>COMPETITION</span></h1></div>
+    <a id="garage-progress" href="#inspection" hidden>Lift the hood</a>
     <p id="load-state" role="status">Loading 3D model…</p>
     <div class="car-controls" aria-label="Vehicle rotation">
       <button type="button" id="turn-left" aria-label="Rotate left" disabled>‹</button>
       <span>360° <span class="drag-label">· Drag sideways</span></span>
       <button type="button" id="turn-right" aria-label="Rotate right" disabled>›</button>
     </div>
-    <div class="hero-bottom"><span class="demo">PHNX WEB STUDIO DEMO</span><a href="#services">Explore services <span aria-hidden="true" class="scroll-mark"></span></a></div>
+    <div class="hero-bottom"><span class="demo">PHNX WEB STUDIO DEMO</span><button class="sound" id="garage-sound" type="button" hidden>Play garage sound</button><a href="#services">Explore services <span aria-hidden="true" class="scroll-mark"></span></a></div>
     <dialog id="detail" aria-labelledby="detail-title"><button class="close" type="button" aria-label="Close service details">×</button><p class="eyebrow">Workshop services</p><h2 id="detail-title"></h2><p id="detail-copy"></p><a class="button" id="detail-book" href="#booking">Book this service</a></dialog>
   </section>
+    <div id="inspection" aria-hidden="true"></div>
+  </div>
   <section class="section" id="services">
     <p class="eyebrow">Workshop services</p>
     <h2>Auto repair in Elgin, IL</h2>

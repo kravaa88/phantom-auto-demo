@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from './assets/GLTFLoader.js';
 import { MeshoptDecoder } from './assets/meshopt_decoder.module.js';
 import { RoomEnvironment } from './assets/RoomEnvironment.js';
+import { mountHood } from './hood.js';
+import { offerGarageSound } from './garage-audio.js';
 
 // Anchors use the normalized GLB coordinates. The front bumper is at +Z.
 const anchors = {
@@ -14,6 +16,10 @@ const anchors = {
 export async function initViewer(services, openService, showFallback) {
   const canvas = document.getElementById('car');
   const garage = document.getElementById('garage');
+  const story = document.getElementById('story');
+  const inspection = document.getElementById('inspection');
+  const shutter = document.getElementById('shutter');
+  const progress = document.getElementById('garage-progress');
   const left = document.getElementById('turn-left');
   const right = document.getElementById('turn-right');
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
@@ -80,6 +86,7 @@ export async function initViewer(services, openService, showFallback) {
     }
   });
   rig.add(car);
+  const hood = await mountHood(car, rig);
 
   const markers = Object.entries(anchors).filter(([id]) => services.has(id)).map(([id, anchor]) => {
     const button = document.createElement('button');
@@ -90,14 +97,22 @@ export async function initViewer(services, openService, showFallback) {
     button.className = 'marker';
     button.setAttribute('aria-label', services.get(id).part + ' — ' + services.get(id).title);
     button.title = services.get(id).part;
-    button.append(symbol);
+    const label = document.createElement('small');
+    label.textContent = services.get(id).part;
+    label.setAttribute('aria-hidden', 'true');
+    button.append(symbol, label);
     button.onclick = () => openService(id);
     document.getElementById('markers').append(button);
-    return { button, anchor: new THREE.Vector3(...anchor) };
+    return { id, button, anchor: new THREE.Vector3(...anchor) };
   });
 
   const motion = matchMedia('(prefers-reduced-motion: reduce)');
   const projected = new THREE.Vector3();
+  const entranceStarted = performance.now();
+  let entranceDone = false;
+  let stage = 0;
+  let baseDistance = 7;
+  let narrow = false;
   let targetYaw = 0;
   let yaw = 0;
   let frame = 0;
@@ -106,23 +121,39 @@ export async function initViewer(services, openService, showFallback) {
   let width = 0;
   let height = 0;
 
-  function draw() {
+  function draw(now) {
     frame = 0;
     yaw = motion.matches ? targetYaw : THREE.MathUtils.lerp(yaw, targetYaw, 0.25);
     if (Math.abs(targetYaw - yaw) < 0.001) yaw = targetYaw;
-    rig.rotation.y = yaw;
+    const animate = !motion.matches;
+    const intro = animate && !entranceDone ? THREE.MathUtils.clamp((now - entranceStarted) / 1900, 0, 1) : 1;
+    entranceDone ||= intro === 1 || stage > 0.04;
+    const arrival = entranceDone ? 1 : THREE.MathUtils.smoothstep(intro, 0, 0.77);
+    const closure = entranceDone ? 1 : THREE.MathUtils.smoothstep(intro, 0.59, 1);
+    const lift = THREE.MathUtils.smoothstep(stage, 0.1, 0.68);
+    const inspectionAngle = 0.24 * lift;
+    rig.position.set(1.9 * (1 - arrival), 0, -2.8 * (1 - arrival));
+    rig.rotation.y = yaw + inspectionAngle + (1 - arrival) * 0.3;
+    hood.rotation.x = -1.02 * lift;
+    shutter.style.setProperty('--closed', closure.toFixed(3));
+    story.classList.toggle('inspecting', stage > 0.44);
+    progress.hidden = !animate || stage > 0.49;
+    const distance = baseDistance * (1 + lift * (narrow ? 0.065 : 0.075));
+    camera.position.set(distance * 0.73, distance * (0.24 + lift * 0.13), distance * 0.68);
+    camera.lookAt(0, (narrow ? 0.69 : 0.86) + lift * 0.13, 0);
     renderer.render(scene, camera);
-    for (const { button, anchor } of markers) {
+    for (const { id, button, anchor } of markers) {
       projected.copy(anchor);
+      if (id === 'engine') projected.y -= 0.07 * lift;
       rig.localToWorld(projected);
       projected.project(camera);
       const x = (projected.x + 1) * width / 2;
       const y = (1 - projected.y) * height / 2;
       button.style.left = x + 'px';
       button.style.top = y + 'px';
-      button.hidden = x < 22 || x > width - 22 || y < 22 || y > height - 22;
+      button.hidden = arrival < 0.96 || x < 22 || x > width - 22 || y < 22 || y > height - 22;
     }
-    if (yaw !== targetYaw) requestDraw();
+    if (!entranceDone || yaw !== targetYaw) requestDraw();
   }
   function requestDraw() {
     if (visible && ready && !frame) frame = requestAnimationFrame(draw);
@@ -132,10 +163,8 @@ export async function initViewer(services, openService, showFallback) {
     height = garage.clientHeight;
     if (!width || !height) return;
     camera.aspect = width / height;
-    const narrow = camera.aspect < 1.02;
-    const distance = narrow ? 7.9 / Math.min(1, camera.aspect / 1.02) : 7.9;
-    camera.position.set(distance * 0.73, distance * 0.27, distance * 0.68);
-    camera.lookAt(0, narrow ? 0.66 : 0.87, 0);
+    narrow = camera.aspect < 1.02;
+    baseDistance = narrow ? 7.2 / Math.min(1, camera.aspect / 1.02) : 6.7;
     camera.updateProjectionMatrix();
     renderer.setSize(width, height, false);
     requestDraw();
@@ -171,6 +200,26 @@ export async function initViewer(services, openService, showFallback) {
     });
   }
 
+  function updateStage() {
+    const offset = story.getBoundingClientRect().top;
+    const runway = inspection.offsetHeight;
+    stage = motion.matches || !runway ? 0 : THREE.MathUtils.clamp(-offset / (runway * 0.76), 0, 1);
+    requestDraw();
+  }
+  function syncMotion() {
+    story.classList.toggle('story-active', !motion.matches);
+    updateStage();
+  }
+  progress.addEventListener('click', (event) => {
+    event.preventDefault();
+    const top = story.getBoundingClientRect().top + scrollY;
+    window.scrollTo({ top: top + inspection.offsetHeight * 0.57, behavior: 'smooth' });
+  });
+  window.addEventListener('scroll', updateStage, { passive: true });
+  window.addEventListener('resize', updateStage, { passive: true });
+  motion.addEventListener('change', syncMotion);
+  offerGarageSound(document.getElementById('garage-sound'));
+  syncMotion();
   new ResizeObserver(resize).observe(garage);
   new IntersectionObserver(([entry]) => {
     visible = entry.isIntersecting;

@@ -25,10 +25,12 @@ dialog.addEventListener('click', (event) => {
 for (const [id, service] of services) {
   const button = document.createElement('button');
   const title = document.createElement('strong');
-  const copy = document.createElement('span');
+  const icon = document.createElement('span');
+  icon.className = 'service-icon';
+  icon.textContent = '+';
+  icon.setAttribute('aria-hidden', 'true');
   title.textContent = service.title;
-  copy.textContent = service.copy;
-  button.append(title, copy);
+  button.append(title, icon);
   button.onclick = () => openService(id);
   grid.append(button);
   form.elements.service.add(new Option(service.title, id));
@@ -94,6 +96,8 @@ form.addEventListener('submit', async (event) => {
 
 function showFallback(error) {
   console.error(error);
+  select('story').classList.remove('story-active');
+  select('garage-progress').hidden = true;
   select('poster').hidden = false;
   select('car').hidden = true;
   select('markers').hidden = true;
