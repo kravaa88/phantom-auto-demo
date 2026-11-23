@@ -42,7 +42,7 @@ export async function initViewer(services, openService, showFallback) {
     scene.add(light);
   }
   addLight(0xe4f1ff, 2.2, -3, 6, 3);
-  addLight(0xbdcaff, 1.1, 4, 4, -4);
+  addLight(0xff995a, 1.35, 4, 4, -4);
   addLight(0xffe2b1, 0.65, 1, 2, 6);
 
   const shadowCanvas = document.createElement('canvas');
@@ -73,11 +73,13 @@ export async function initViewer(services, openService, showFallback) {
   car.traverse((object) => {
     const material = object.material;
     if (!material) return;
-    if (['Meshesbody151Mtl', 'Mesheslivery1Mtl'].includes(material.name)) {
-      material.map = null;
-      material.color.set('#326a62');
-      material.metalness = 0.68;
-      material.roughness = 0.33;
+    if (object.name === 'Object_6' || ['Meshesbody151Mtl', 'Mesheslivery1Mtl'].includes(material.name)) {
+      object.material = material.clone();
+      object.material.map = null;
+      object.material.color.set('#d94c14');
+      object.material.metalness = 0.61;
+      object.material.roughness = 0.28;
+      return;
     }
     if (['Meshesm8rim1Mtl', 'Meshesm8rim0011Mtl', 'Mesheszx1Mtl', 'Mesheschrome51Mtl'].includes(material.name)) {
       material.color.set('#34383c');
