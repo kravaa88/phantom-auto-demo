@@ -133,3 +133,26 @@ dialog{max-width:min(520px,calc(100% - 32px));border:1px solid #4c4f52;border-ra
   .marker[data-part="engine"] small { top: auto; bottom: 100%; translate: -50% 4px; }
   .marker[data-part="diagnostics"] small { left: 34%; }
 }
+
+.workshop-actions,.paint-tools,.workshop-status{position:absolute;z-index:4;right:var(--gutter)}
+.workshop-actions{top:clamp(22px,6vh,65px);display:flex;gap:6px;flex-wrap:wrap}
+.workshop-actions button,.paint-tools button{min-height:44px;padding:7px 11px;color:#fff6ec;background:#171411eb;border:1px solid #544135;border-radius:4px;font-size:.85rem}
+.workshop-actions button:hover,.paint-tools button:hover,.paint-tools button[aria-pressed=true],.workshop-actions button[aria-pressed=true]{border-color:var(--accent);color:var(--accent)}
+#paint-toggle[aria-pressed=false]{background:var(--accent);color:#160d08;border-color:var(--accent);font-weight:800}
+.paint-tools{bottom:78px;width:min(370px,calc(100% - 2 * var(--gutter)));padding:13px;background:#14100df2;border:1px solid #654536;border-radius:6px}
+.paint-fields,.paint-actions{display:flex;gap:8px;align-items:end}
+.paint-fields label{font-size:.8rem;flex:1;min-width:0}
+.paint-fields input,.paint-fields select{padding:4px 6px;height:42px;min-height:42px}
+.paint-fields input[type=range]{accent-color:var(--accent)}
+.paint-actions{margin-top:7px}
+#paint-status{min-height:1.3em;margin:7px 0 0;font-size:.77rem}
+.workshop-status{top:calc(clamp(22px,6vh,65px) + 48px);font-size:.8rem;color:var(--accent)}
+.painting #car{touch-action:none;cursor:crosshair}
+.painting .car-controls,.painting #garage-progress{display:none}
+@media(max-width:760px){
+  .workshop-actions{top:145px;left:var(--gutter);right:auto;gap:4px}
+  .workshop-actions button{padding-inline:8px;font-size:.75rem}
+  .workshop-status{top:192px;left:var(--gutter);right:auto}
+  .paint-tools{bottom:77px;right:var(--gutter);padding:8px}
+  .paint-tools button{min-height:40px}
+}

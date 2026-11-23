@@ -31,6 +31,25 @@
       <div id="markers"></div>
     </div>
     <div class="hero-title"><div class="eyebrow">Digital garage <span></span> Elgin, IL</div><h1 id="car-title">BMW M4<span>COMPETITION</span></h1></div>
+    <div id="workshop-actions" class="workshop-actions" hidden>
+      <button id="paint-toggle" type="button" aria-pressed="false" hidden>Paint doors</button>
+      <button id="replay-entrance" type="button">Replay arrival</button>
+      <button id="export-frame" type="button">Save 4K</button>
+    </div>
+    <section id="paint-tools" class="paint-tools" aria-label="Door paint tools" hidden>
+      <div class="paint-fields">
+        <label>Door <select id="paint-side"><option value="1">Right</option><option value="-1">Left</option></select></label>
+        <label>Color <input id="paint-color" type="color" value="#fff4cb"></label>
+        <label>Brush <input id="paint-size" type="range" min="2" max="36" value="10"></label>
+      </div>
+      <div class="paint-actions">
+        <button id="paint-eraser" type="button" aria-pressed="false">Eraser</button>
+        <button id="paint-undo" type="button">Undo</button>
+        <button id="paint-clear" type="button">Clear door</button>
+      </div>
+      <p id="paint-status" role="status"></p>
+    </section>
+    <span id="export-status" class="workshop-status" role="status"></span>
     <a id="garage-progress" href="#inspection" hidden>Lift the hood</a>
     <p id="load-state" role="status">Loading 3D model…</p>
     <div class="car-controls" aria-label="Vehicle rotation">

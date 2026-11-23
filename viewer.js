@@ -3,6 +3,8 @@ import { GLTFLoader } from './assets/GLTFLoader.js';
 import { MeshoptDecoder } from './assets/meshopt_decoder.module.js';
 import { RoomEnvironment } from './assets/RoomEnvironment.js';
 import { mountHood } from './hood.js';
+import { mountPaint } from './paint.js';
+import { mountWorkshop } from './workshop.js';
 import { offerGarageSound } from './garage-audio.js';
 
 // Anchors use the normalized GLB coordinates. The front bumper is at +Z.
@@ -18,12 +20,13 @@ export async function initViewer(services, openService, showFallback) {
   const garage = document.getElementById('garage');
   const story = document.getElementById('story');
   const inspection = document.getElementById('inspection');
-  const shutter = document.getElementById('shutter');
+  const controls = document.getElementById('workshop-actions');
   const progress = document.getElementById('garage-progress');
   const left = document.getElementById('turn-left');
   const right = document.getElementById('turn-right');
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
   const scene = new THREE.Scene();
+  const closeDoor = mountWorkshop(scene);
   const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, matchMedia('(pointer: coarse)').matches ? 1.35 : 1.7));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -88,6 +91,12 @@ export async function initViewer(services, openService, showFallback) {
     }
   });
   rig.add(car);
+  let paintSide = 0;
+  const paint = await mountPaint(car, rig, camera, canvas, requestDraw, (side) => {
+    paintSide = side;
+    entranceDone = true;
+    requestDraw();
+  });
   const hood = await mountHood(car, rig);
 
   const markers = Object.entries(anchors).filter(([id]) => services.has(id)).map(([id, anchor]) => {
@@ -111,7 +120,7 @@ export async function initViewer(services, openService, showFallback) {
 
   const motion = matchMedia('(prefers-reduced-motion: reduce)');
   const projected = new THREE.Vector3();
-  const entranceStarted = performance.now();
+  let entranceStarted = performance.now();
   let entranceDone = false;
   let stage = 0;
   let baseDistance = 7;
@@ -129,21 +138,23 @@ export async function initViewer(services, openService, showFallback) {
     yaw = motion.matches ? targetYaw : THREE.MathUtils.lerp(yaw, targetYaw, 0.25);
     if (Math.abs(targetYaw - yaw) < 0.001) yaw = targetYaw;
     const animate = !motion.matches;
-    const intro = animate && !entranceDone ? THREE.MathUtils.clamp((now - entranceStarted) / 1900, 0, 1) : 1;
-    entranceDone ||= intro === 1 || stage > 0.04;
-    const arrival = entranceDone ? 1 : THREE.MathUtils.smoothstep(intro, 0, 0.77);
-    const closure = entranceDone ? 1 : THREE.MathUtils.smoothstep(intro, 0.59, 1);
-    const lift = THREE.MathUtils.smoothstep(stage, 0.1, 0.68);
+    const intro = animate && !entranceDone ? THREE.MathUtils.clamp((now - entranceStarted) / 4200, 0, 1) : 1;
+    entranceDone ||= intro === 1 || stage > 0.04 || paintSide !== 0;
+    const arrival = entranceDone ? 1 : THREE.MathUtils.smoothstep(intro, 0, 0.82);
+    const closure = entranceDone ? 1 : THREE.MathUtils.smoothstep(intro, 0.73, 1);
+    const lift = paintSide ? 0 : THREE.MathUtils.smoothstep(stage, 0.1, 0.68);
     const inspectionAngle = 0.24 * lift;
-    rig.position.set(1.9 * (1 - arrival), 0, -2.8 * (1 - arrival));
-    rig.rotation.y = yaw + inspectionAngle + (1 - arrival) * 0.3;
+    rig.position.set(-0.73 * 17 * (1 - arrival), 0, -0.68 * 17 * (1 - arrival));
+    rig.rotation.y = paintSide ? Math.atan2(0.73, 0.68) - paintSide * Math.PI / 2 : yaw + inspectionAngle + (1 - arrival) * 0.76;
     hood.rotation.x = -1.02 * lift;
-    shutter.style.setProperty('--closed', closure.toFixed(3));
+    closeDoor(closure);
     story.classList.toggle('inspecting', stage > 0.44);
-    progress.hidden = !animate || stage > 0.49;
+    progress.hidden = paintSide !== 0 || !animate || stage > 0.49;
     const distance = baseDistance * (1 + lift * (narrow ? 0.065 : 0.075));
     camera.position.set(distance * 0.73, distance * (0.24 + lift * 0.13), distance * 0.68);
-    camera.lookAt(0, (narrow ? 0.69 : 0.86) + lift * 0.13, 0);
+        camera.zoom = paintSide ? (narrow ? 2.35 : 1.82) : 1;
+    camera.updateProjectionMatrix();
+    camera.lookAt(0, paintSide ? 0.65 : (narrow ? 0.69 : 0.86) + lift * 0.13, 0);
     renderer.render(scene, camera);
     for (const { id, button, anchor } of markers) {
       projected.copy(anchor);
@@ -154,7 +165,7 @@ export async function initViewer(services, openService, showFallback) {
       const y = (1 - projected.y) * height / 2;
       button.style.left = x + 'px';
       button.style.top = y + 'px';
-      button.hidden = arrival < 0.96 || x < 22 || x > width - 22 || y < 22 || y > height - 22;
+      button.hidden = paintSide !== 0 || arrival < 0.96 || x < 22 || x > width - 22 || y < 22 || y > height - 22;
     }
     if (!entranceDone || yaw !== targetYaw) requestDraw();
   }
@@ -185,10 +196,12 @@ export async function initViewer(services, openService, showFallback) {
   let drag;
   canvas.addEventListener('pointerdown', (event) => {
     if (!event.isPrimary || event.button !== 0) return;
+    if (paint.active()) { paint.start(event); return; }
     drag = { id: event.pointerId, x: event.clientX, y: event.clientY, baseline: targetYaw, active: false };
     canvas.setPointerCapture(event.pointerId);
   });
   canvas.addEventListener('pointermove', (event) => {
+    if (paint.active()) { paint.move(event); return; }
     if (drag?.id !== event.pointerId) return;
     const dx = event.clientX - drag.x;
     const dy = event.clientY - drag.y;
@@ -199,6 +212,7 @@ export async function initViewer(services, openService, showFallback) {
   });
   for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
     canvas.addEventListener(type, (event) => {
+      paint.end(event);
       if (drag?.id === event.pointerId) drag = undefined;
     });
   }
@@ -233,6 +247,56 @@ export async function initViewer(services, openService, showFallback) {
     ready = false;
     showFallback(new Error('WebGL context lost'));
   });
+  document.getElementById('replay-entrance').onclick = () => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    if (paint.active()) document.getElementById('paint-toggle').click();
+    targetYaw = yaw = 0;
+    entranceStarted = performance.now();
+    entranceDone = false;
+    updateStage();
+  };
+  document.getElementById('export-frame').onclick = () => {
+    const status = document.getElementById('export-status');
+    if (renderer.capabilities.maxTextureSize < 4096 || renderer.getContext().getParameter(renderer.getContext().MAX_RENDERBUFFER_SIZE) < 3840) {
+      status.textContent = 'This device cannot render a 4K frame.';
+      return;
+    }
+    const exportButton = document.getElementById('export-frame');
+    exportButton.disabled = true;
+    status.textContent = 'Rendering 4K…';
+    const shot = camera.clone();
+    shot.aspect = 3840 / 2160;
+    if (narrow) {
+      shot.position.multiplyScalar(7.4 / baseDistance);
+      shot.zoom = paintSide ? 1.55 : 1;
+      shot.lookAt(0, paintSide ? 0.65 : 0.88, 0);
+    }
+    shot.updateProjectionMatrix();
+    const ratio = renderer.getPixelRatio();
+    try {
+      renderer.setPixelRatio(1);
+      renderer.setSize(3840, 2160, false);
+      renderer.render(scene, shot);
+      canvas.toBlob((blob) => {
+        exportButton.disabled = false;
+        if (!blob) { status.textContent = 'The 4K frame could not be saved.'; return; }
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'phantom-auto-bmw-4k.png';
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(link.href), 30000);
+        status.textContent = '4K frame ready.';
+      }, 'image/png');
+    } catch {
+      exportButton.disabled = false;
+      status.textContent = 'The 4K frame could not be saved.';
+    } finally {
+      renderer.setPixelRatio(ratio);
+      renderer.setSize(width, height, false);
+      requestDraw();
+    }
+  };
+  controls.hidden = false;
   resize();
   document.getElementById('load-state').hidden = true;
 }

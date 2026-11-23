@@ -98,6 +98,8 @@ function showFallback(error) {
   console.error(error);
   select('story').classList.remove('story-active');
   select('garage-progress').hidden = true;
+  select('workshop-actions').hidden = true;
+  select('paint-tools').hidden = true;
   select('poster').hidden = false;
   select('car').hidden = true;
   select('markers').hidden = true;
