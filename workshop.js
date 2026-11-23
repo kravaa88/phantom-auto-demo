@@ -1,5 +1,6 @@
 import * as T from 'three';
 import { mergeGeometries } from './assets/BufferGeometryUtils.js';
+import { gateX } from './arrival.js';
 
 export function mountWorkshop(scene) {
   scene.background = new T.Color('#100e0d');
@@ -21,26 +22,31 @@ export function mountWorkshop(scene) {
   }
 
   box(32, 0.16, 42, 0, -0.11, -8, concrete);
-  box(4.2, 4.3, 0.25, -4.55, 2.14, -8, steel);
-  box(4.2, 4.3, 0.25, 4.55, 2.14, -8, steel);
-  box(5, 1.25, 0.27, 0, 4.02, -8, steel);
-  box(0.1, 3.5, 0.35, -2.45, 1.75, -7.91, orange);
-  box(0.1, 3.5, 0.35, 2.45, 1.75, -7.91, orange);
+  box(9.6, 4.3, 0.25, -4.2, 2.14, -8, steel);
+  box(3.4, 4.3, 0.25, 7.3, 2.14, -8, steel);
+  box(5, 1.25, 0.27, gateX, 4.02, -8, steel);
+  box(0.1, 3.5, 0.35, gateX - 2.45, 1.75, -7.91, orange);
+  box(0.1, 3.5, 0.35, gateX + 2.45, 1.75, -7.91, orange);
   const shutter = new T.Group();
+  shutter.position.x = gateX;
   room.add(shutter);
   box(4.82, 3.46, 0.12, 0, 0, -8.06, steel, shutter);
   for (let i = 0; i < 19; i++) box(4.81, 0.027, 0.035, 0, -1.7 + i * 0.186, -7.982, black, shutter);
   box(4.86, 0.08, 0.18, 0, -1.72, -8, orange, shutter);
 
   for (const side of [-1, 1]) {
-    box(0.19, 4.55, 16, side * 6.6, 2.25, -3.7, concrete);
-    box(0.048, 0.009, 16, side * 1.8, -0.025, -4.3, amber);
+    box(0.19, 4.55, 16, side * 9, 2.25, -3.7, concrete);
+    const laneX = side * 1.48;
+    box(0.048, 0.009, 7.8, gateX + laneX, -0.025, -11.9, amber);
+    const guide = box(0.048, 0.009, Math.hypot(gateX, 8), laneX + gateX / 2, -0.025, -4, amber);
+    guide.rotation.y = -Math.atan2(gateX, 8);
+    box(0.048, 0.009, 4, laneX, -0.025, 2, amber);
     box(0.07, 0.012, 16, side * 3.4, -0.023, -4.3, steel);
     for (const z of [-9.8, -5.5, -1.7, 2.1]) {
       box(3.4, 0.1, 0.17, side * 2.8, 4.05, z, black);
       box(3.3, 0.045, 0.1, side * 2.8, 3.99, z, light);
     }
-    const x = side * 4.1;
+    const x = side < 0 ? -3.5 : 7.35;
     box(2.05, 0.87, 0.74, x, 0.48, -6.5, orange);
     box(2.16, 0.1, 0.85, x, 0.97, -6.5, black);
     box(2.06, 1.2, 0.08, x, 1.67, -6.87, black);
@@ -56,7 +62,11 @@ export function mountWorkshop(scene) {
     }
     box(1.92, 0.04, 0.055, x, 2.25, -6.79, light);
   }
-  box(4.2, 0.07, 0.1, 0, 3.61, -7.79, light);
+  box(4.2, 0.07, 0.1, gateX, 3.61, -7.79, light);
+  const dusk = new T.MeshBasicMaterial({ color: '#403c43' });
+  box(20, 8, 0.12, gateX, 3, -23, dusk);
+  box(0.1, 2.7, 0.17, gateX + 2.13, 1.35, -9.5, light);
+  box(0.1, 2.7, 0.17, gateX - 2.13, 1.35, -9.5, light);
   // Batch static fittings by material and keep the rolling gate independent.
   for (const parent of [room, shutter]) {
     const materials = new Map();

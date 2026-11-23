@@ -3,8 +3,9 @@ import { GLTFLoader } from './assets/GLTFLoader.js';
 import { MeshoptDecoder } from './assets/meshopt_decoder.module.js';
 import { RoomEnvironment } from './assets/RoomEnvironment.js';
 import { mountHood } from './hood.js';
-import { mountPaint } from './paint.js';
+import { factoryPaint, mountPaint } from './paint.js';
 import { mountWorkshop } from './workshop.js';
+import { mountArrival } from './arrival.js';
 import { offerGarageSound } from './garage-audio.js';
 
 // Anchors use the normalized GLB coordinates. The front bumper is at +Z.
@@ -79,7 +80,7 @@ export async function initViewer(services, openService, showFallback) {
     if (object.name === 'Object_6' || ['Meshesbody151Mtl', 'Mesheslivery1Mtl'].includes(material.name)) {
       object.material = material.clone();
       object.material.map = null;
-      object.material.color.set('#d94c14');
+      object.material.color.set(factoryPaint);
       object.material.metalness = 0.61;
       object.material.roughness = 0.28;
       return;
@@ -98,6 +99,7 @@ export async function initViewer(services, openService, showFallback) {
     requestDraw();
   });
   const hood = await mountHood(car, rig);
+  const drive = mountArrival(car, rig);
 
   const markers = Object.entries(anchors).filter(([id]) => services.has(id)).map(([id, anchor]) => {
     const button = document.createElement('button');
@@ -138,14 +140,14 @@ export async function initViewer(services, openService, showFallback) {
     yaw = motion.matches ? targetYaw : THREE.MathUtils.lerp(yaw, targetYaw, 0.25);
     if (Math.abs(targetYaw - yaw) < 0.001) yaw = targetYaw;
     const animate = !motion.matches;
-    const intro = animate && !entranceDone ? THREE.MathUtils.clamp((now - entranceStarted) / 4200, 0, 1) : 1;
+    const intro = animate && !entranceDone ? THREE.MathUtils.clamp((now - entranceStarted) / 4900, 0, 1) : 1;
     entranceDone ||= intro === 1 || stage > 0.04 || paintSide !== 0;
-    const arrival = entranceDone ? 1 : THREE.MathUtils.smoothstep(intro, 0, 0.82);
-    const closure = entranceDone ? 1 : THREE.MathUtils.smoothstep(intro, 0.73, 1);
+    const arrival = entranceDone ? 1 : THREE.MathUtils.smootherstep(intro, 0, 0.89);
+    const closure = entranceDone ? 1 : THREE.MathUtils.smoothstep(intro, 0.58, 0.96);
     const lift = paintSide ? 0 : THREE.MathUtils.smoothstep(stage, 0.1, 0.68);
     const inspectionAngle = 0.24 * lift;
-    rig.position.set(-0.73 * 17 * (1 - arrival), 0, -0.68 * 17 * (1 - arrival));
-    rig.rotation.y = paintSide ? Math.atan2(0.73, 0.68) - paintSide * Math.PI / 2 : yaw + inspectionAngle + (1 - arrival) * 0.76;
+    const heading = drive(arrival) * (1 - THREE.MathUtils.smoothstep(arrival, 0.84, 1));
+    rig.rotation.y = paintSide ? Math.atan2(0.73, 0.68) - paintSide * Math.PI / 2 : yaw + inspectionAngle + heading;
     hood.rotation.x = -1.02 * lift;
     closeDoor(closure);
     story.classList.toggle('inspecting', stage > 0.44);
@@ -255,17 +257,23 @@ export async function initViewer(services, openService, showFallback) {
     entranceDone = false;
     updateStage();
   };
-  document.getElementById('export-frame').onclick = () => {
+  const exportButton = document.getElementById('export-frame');
+  const gl = renderer.getContext();
+  const maxFrame = Math.min(renderer.capabilities.maxTextureSize, gl.getParameter(gl.MAX_RENDERBUFFER_SIZE), gl.getParameter(gl.MAX_VIEWPORT_DIMS)[0]);
+  const exportWidth = maxFrame >= 7680 ? 7680 : 3840;
+  const exportHeight = exportWidth * 9 / 16;
+  const resolution = exportWidth === 7680 ? '8K' : '4K';
+  exportButton.textContent = 'Save ' + resolution;
+  exportButton.onclick = () => {
     const status = document.getElementById('export-status');
-    if (renderer.capabilities.maxTextureSize < 4096 || renderer.getContext().getParameter(renderer.getContext().MAX_RENDERBUFFER_SIZE) < 3840) {
+    if (maxFrame < exportWidth) {
       status.textContent = 'This device cannot render a 4K frame.';
       return;
     }
-    const exportButton = document.getElementById('export-frame');
     exportButton.disabled = true;
-    status.textContent = 'Rendering 4K…';
+    status.textContent = 'Rendering ' + resolution + '…';
     const shot = camera.clone();
-    shot.aspect = 3840 / 2160;
+    shot.aspect = exportWidth / exportHeight;
     if (narrow) {
       shot.position.multiplyScalar(7.4 / baseDistance);
       shot.zoom = paintSide ? 1.55 : 1;
@@ -275,21 +283,21 @@ export async function initViewer(services, openService, showFallback) {
     const ratio = renderer.getPixelRatio();
     try {
       renderer.setPixelRatio(1);
-      renderer.setSize(3840, 2160, false);
+      renderer.setSize(exportWidth, exportHeight, false);
       renderer.render(scene, shot);
       canvas.toBlob((blob) => {
         exportButton.disabled = false;
-        if (!blob) { status.textContent = 'The 4K frame could not be saved.'; return; }
+        if (!blob) { status.textContent = 'The ' + resolution + ' frame could not be saved.'; return; }
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = 'phantom-auto-bmw-4k.png';
+        link.download = 'phantom-auto-bmw-' + resolution.toLowerCase() + '.png';
         link.click();
         setTimeout(() => URL.revokeObjectURL(link.href), 30000);
-        status.textContent = '4K frame ready.';
+        status.textContent = resolution + ' frame ready.';
       }, 'image/png');
     } catch {
       exportButton.disabled = false;
-      status.textContent = 'The 4K frame could not be saved.';
+      status.textContent = 'The ' + resolution + ' frame could not be saved.';
     } finally {
       renderer.setPixelRatio(ratio);
       renderer.setSize(width, height, false);

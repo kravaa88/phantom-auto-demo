@@ -156,3 +156,4 @@ dialog{max-width:min(520px,calc(100% - 32px));border:1px solid #4c4f52;border-ra
   .paint-tools{bottom:77px;right:var(--gutter);padding:8px}
   .paint-tools button{min-height:40px}
 }
+.paint-actions{flex-wrap:wrap;align-items:center}

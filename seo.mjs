@@ -6,7 +6,7 @@ if (!['http:', 'https:'].includes(target.protocol) || /[?#]/.test(target.href)) 
 if (!target.pathname.endsWith('/')) target.pathname += '/';
 
 await mkdir('dist', { recursive: true });
-for (const path of ['assets', 'style.css', 'main.js', 'viewer.js', 'paint.js', 'workshop.js', 'hood.js', 'garage-audio.js', 'config.js', 'ATTRIBUTION.md']) {
+for (const path of ['assets', 'style.css', 'main.js', 'viewer.js', 'paint.js', 'workshop.js', 'arrival.js', 'hood.js', 'garage-audio.js', 'config.js', 'ATTRIBUTION.md']) {
   await cp(path, 'dist/' + path, { recursive: true });
 }
 
