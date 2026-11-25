@@ -19,7 +19,7 @@
 <a class="skip" href="#services">Skip to services</a>
 <header class="top" id="top">
   <a class="brand" href="#top"><img data-logo src="./assets/mark.svg" alt="" width="34" height="34"><span data-brand>PHANTOM AUTO</span></a>
-  <nav aria-label="Main navigation"><a href="#services">Services</a><a href="#visit">Location</a><a class="button compact" href="#booking">Book service</a></nav>
+  <nav aria-label="Main navigation"><a href="#services">Services</a><a href="#visit">Location</a><a class="button compact ghost" id="header-call" hidden>Call</a><a class="button compact" href="#booking">Book service</a></nav>
 </header>
 <main>
   <div id="story">
@@ -31,7 +31,7 @@
       <video id="arrival-film" muted playsinline preload="none" aria-hidden="true" disablepictureinpicture></video>
       <div id="markers"></div>
     </div>
-    <div class="hero-title"><div class="eyebrow">Digital garage <span></span> Elgin, IL</div><h1 id="car-title">BMW M4<span>COMPETITION</span></h1></div>
+    <div class="hero-title"><h1 class="eyebrow">Auto repair <span></span> Elgin, IL</h1><p id="car-title" class="car-name">BMW M4<span>COMPETITION</span></p></div>
     <div id="workshop-actions" class="workshop-actions" hidden>
       <button id="paint-toggle" type="button" aria-pressed="false" hidden>Paint doors</button>
       <button id="replay-entrance" type="button">Replay arrival</button>
@@ -77,6 +77,7 @@
     <form id="book-form" aria-describedby="booking-note">
       <label>Service <select name="service" required><option value="">Select a service</option></select></label>
       <div class="fields"><label>Name<input name="name" autocomplete="name" required maxlength="100"></label><label>Email<input name="email" type="email" autocomplete="email" required maxlength="254"></label></div>
+      <label>Phone<input name="phone" type="tel" autocomplete="tel" inputmode="tel" required maxlength="30" placeholder="(847) 555-0123"></label>
       <label>Preferred date<input name="date" type="date" required></label>
       <label>Vehicle and notes <span>(optional)</span><textarea name="notes" rows="3" maxlength="1500"></textarea></label>
       <button type="submit" class="button" id="submit-book" disabled>Request appointment</button>

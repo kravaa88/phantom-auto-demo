@@ -17,7 +17,7 @@ Open http://127.0.0.1:4173/. The project uses a browser import map and self-host
 
 Edit `config.js` to set the display name, logo path, business telephone, address, colors, available services, reviews URL and booking endpoint. Keep `verified: false` until the owner confirms the business details. When verified, the build generates AutoRepair structured data and adds the site URL to its sitemap. The demo uses `noindex,follow` and an empty sitemap. Review the descriptions in `index.html` if the target city or services change. Adjust the document language if translating the experience.
 
-The booking endpoint receives a JSON POST with service, name, email, date and notes. It must validate the request, allow the deployed origin, persist accepted requests and return `{"accepted":true}` only on acceptance. The demo keeps submission disabled. The Google map loads after user interaction.
+The booking endpoint receives a JSON POST with service, name, email, phone, date and notes. It must validate the request, allow the deployed origin, persist accepted requests and return `{"accepted":true}` only on acceptance. The demo keeps submission disabled. The Google map loads after user interaction.
 
 ## GitHub Pages
 

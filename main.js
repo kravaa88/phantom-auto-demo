@@ -51,13 +51,16 @@ select('load-map').onclick = () => {
   frame.referrerPolicy = 'strict-origin-when-cross-origin';
   select('map').replaceChildren(frame);
 };
-if (shop.verified && shop.phone) {
+if (shop.phone) {
   const link = document.createElement('a');
   link.className = 'button';
   link.textContent = 'Call Now';
   link.href = 'tel:' + shop.phone.replace(/[^+\d]/g, '');
   select('call').replaceWith(link);
   select('phone-note').textContent = shop.phone;
+  const hc = select('header-call');
+  hc.href = link.href;
+  hc.hidden = false;
 }
 if (shop.verified && shop.reviewsUrl) {
   select('reviews-note').textContent = 'See customer feedback on our Google Business Profile.';
