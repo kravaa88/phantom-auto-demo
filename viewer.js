@@ -36,8 +36,8 @@ export async function initViewer(services, openService, showFallback) {
   const touch = matchMedia('(pointer: coarse)').matches;
   const imageLoader = new THREE.TextureLoader();
   const [color, normal, studio] = await Promise.all([
-    imageLoader.loadAsync(new URL('./assets/concrete-color.jpg', import.meta.url).href).catch(() => null),
-    imageLoader.loadAsync(new URL('./assets/concrete-normal.jpg', import.meta.url).href).catch(() => null),
+    imageLoader.loadAsync(new URL('./assets/concrete-color.webp', import.meta.url).href).catch(() => null),
+    imageLoader.loadAsync(new URL('./assets/concrete-normal.webp', import.meta.url).href).catch(() => null),
     new RGBELoader().loadAsync(new URL('./assets/studio-light.hdr', import.meta.url).href).catch(() => null),
   ]);
   if (color) color.colorSpace = THREE.SRGBColorSpace;
